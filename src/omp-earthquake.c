@@ -48,6 +48,7 @@
  ****************************************************************************/
 #include "hpc.h"
 #include <assert.h>
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>     /* rand() */
 
@@ -103,8 +104,10 @@ void setup(float* grid, int n, float fmin, float fmax)
  */
 void increment_energy(float *grid, int n, float delta)
 {
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    int i, j;
+#pragma omp parallel for collapse(2) private(j)
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) {
             *IDX(grid, i, j, n) += delta;
         }
     }
