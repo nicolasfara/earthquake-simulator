@@ -47,14 +47,16 @@
  *
  ****************************************************************************/
 #include "hpc.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>     /* rand() */
-#include <assert.h>
 
 /* energia massima */
 #define EMAX 4.0f
 /* energia da aggiungere ad ogni timestep */
 #define EDELTA 1e-4
+/* pre-defined seed for pseudo random initialization */
+#define SEED 19
 
 /**
  * Restituisce un puntatore all'elemento di coordinate (i,j) del
@@ -71,7 +73,7 @@ static inline float *IDX(float *grid, int i, int j, int n)
  */
 float randab( float a, float b )
 {
-    return a + (b-a)*(rand() / (float)RAND_MAX);
+    return a + (b-a) * (rand() / (float)RAND_MAX);
 }
 
 /**
@@ -87,8 +89,8 @@ float randab( float a, float b )
  */
 void setup( float* grid, int n, float fmin, float fmax )
 {
-    for ( int i=0; i<n; i++ ) {
-        for ( int j=0; j<n; j++ ) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             *IDX(grid, i, j, n) = randab(fmin, fmax);
         }
     }
@@ -101,8 +103,8 @@ void setup( float* grid, int n, float fmin, float fmax )
  */
 void increment_energy( float *grid, int n, float delta )
 {
-    for (int i=0; i<n; i++) {
-        for (int j=0; j<n; j++) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             *IDX(grid, i, j, n) += delta;
         }
     }
@@ -115,15 +117,17 @@ void increment_energy( float *grid, int n, float delta )
 int count_cells( float *grid, int n )
 {
     int c = 0;
-    for (int i=0; i<n; i++) {
-        for (int j=0; j<n; j++) {
-            if ( *IDX(grid, i, j, n) > EMAX ) { c++; }
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if ( *IDX(grid, i, j, n) > EMAX ) {
+                c++;
+            }
         }
     }
     return c;
 }
 
-/** 
+/**
  * Distribuisce l'energia di ogni cella a quelle adiacenti (se
  * presenti). cur denota il dominio corrente, next denota il dominio
  * che conterra' il nuovo valore delle energie. Questa funzione
@@ -169,8 +173,8 @@ void propagate_energy( float *cur, float *next, int n )
 float average_energy(float *grid, int n)
 {
     float sum = 0.0f;
-    for (int i=0; i<n; i++) {
-        for (int j=0; j<n; j++) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             sum += *IDX(grid, i, j, n);
         }
     }
@@ -184,33 +188,37 @@ int main( int argc, char* argv[] )
     float Emean;
     int c;
 
-    srand(19); /* Inizializzazione del generatore pseudocasuale */
-    
+    srand(SEED); /* Inizializzazione del generatore pseudocasuale */
+
     if ( argc > 3 ) {
         fprintf(stderr, "Usage: %s [nsteps [n]]\n", argv[0]);
         return EXIT_FAILURE;
     }
 
     if ( argc > 1 ) {
-        nsteps = atoi(argv[1]);
+        char *pEnd;
+        // 'atoi' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead [cert-err34-c] [W]
+        nsteps = strtol(argv[1], &pEnd, 10);
     }
 
     if ( argc > 2 ) {
-        n = atoi(argv[2]);
+        char *pEnd;
+        // 'atoi' used to convert a string to an integer value, but function will not report conversion errors; consider using 'strtol' instead [cert-err34-c] [W]
+        n = strtol(argv[2], &pEnd, 10);
     }
 
-    const size_t size = n*n*sizeof(float);
+    const size_t size = n * n * sizeof(float);
 
     /* Allochiamo i domini */
-    cur = (float*)malloc(size); assert(cur);
-    next = (float*)malloc(size); assert(next);
+    cur = (float *) malloc(size); assert(cur);
+    next = (float *) malloc(size); assert(next);
 
-    /* L'energia iniziale di ciascuna cella e' scelta 
-       con probabilita' uniforme nell'intervallo [0, EMAX*0.1] */       
+    /* L'energia iniziale di ciascuna cella e' scelta
+       con probabilita' uniforme nell'intervallo [0, EMAX*0.1] */
     setup(cur, n, 0, EMAX*0.1);
-    
+
     const double tstart = hpc_gettime();
-    for (s=0; s<nsteps; s++) {
+    for (s = 0; s < nsteps; s++) {
         /* L'ordine delle istruzioni che seguono e' importante */
         increment_energy(cur, n, EDELTA);
         c = count_cells(cur, n);
@@ -224,13 +232,15 @@ int main( int argc, char* argv[] )
         next = tmp;
     }
     const double elapsed = hpc_gettime() - tstart;
-    
-    double Mupdates = (((double)n)*n/1.0e6)*nsteps; /* milioni di celle aggiornate per ogni secondo di wall clock time */
+
+    double Mupdates = (((double) n) * n / 1.0e6) * nsteps; /* milioni di celle aggiornate per ogni secondo di wall clock time */
     fprintf(stderr, "%s : %.4f Mupdates in %.4f seconds (%f Mupd/sec)\n", argv[0], Mupdates, elapsed, Mupdates/elapsed);
 
     /* Libera la memoria */
     free(cur);
     free(next);
-    
+
     return EXIT_SUCCESS;
 }
+
+// vim: set nofoldenable ts=4 sw=4 sts=4 et :
