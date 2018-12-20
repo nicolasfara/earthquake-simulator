@@ -1,4 +1,8 @@
 earthquake
 cuda-earthquake
 omp-earthquake
+*.o
+*~
+*.png
+out
 
