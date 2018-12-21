@@ -90,8 +90,19 @@ float randab(float a, float b)
  */
 void setup(float* grid, int n, float fmin, float fmax)
 {
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    int ghost_n = n + 2;
+#pragma omp parallel for default(none) shared(grid, ghost_n, n)
+    for(int j = 0; j < ghost_n; j++) {
+        // righe
+        *IDX(grid, 0, j, ghost_n) = 0;
+        *IDX(grid, n + 1, j, ghost_n) = 0;
+        // Colonne
+        *IDX(grid, j, 0, ghost_n) = 0;
+        *IDX(grid, j, n + 1, ghost_n) = 0;
+    }
+    // For non parallelizzabile (randab)
+    for (int i = 1; i < n + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
             *IDX(grid, i, j, n) = randab(fmin, fmax);
         }
     }
@@ -105,8 +116,8 @@ void setup(float* grid, int n, float fmin, float fmax)
 void increment_energy(float *grid, int n, float delta)
 {
 #pragma omp parallel for default(none) shared(grid, n, delta) schedule(runtime)
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    for (int i = 1; i < n + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
             *IDX(grid, i, j, n) += delta;
         }
     }
@@ -120,8 +131,8 @@ int count_cells(float *grid, int n)
 {
     int c = 0;
 #pragma omp parallel for default(none) reduction(+:c) shared(grid, n) schedule(runtime)
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    for (int i = 1; i < n + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
             if (*IDX(grid, i, j, n) > EMAX) {
                 c++;
             }
@@ -140,27 +151,27 @@ void propagate_energy(float *cur, float *next, int n)
 {
     const float FDELTA = EMAX/4;
 #pragma omp parallel for default(none) schedule(runtime) shared(n, cur, next)
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    for (int i = 1; i < n + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
             float F = *IDX(cur, i, j, n);
             float *out = IDX(next, i, j, n);
 
             /* Se l'energia del vicino di sinistra (se esiste) e'
                maggiore di EMAX, allora la cella (i,j) ricevera'
                energia addizionale FDELTA = EMAX/4 */
-            if ((j>0) && (*IDX(cur, i, j-1, n) > EMAX)) {
+            if (*IDX(cur, i, j-1, n) > EMAX) {
                 F += FDELTA;
             }
             /* Idem per il vicino di destra */
-            if ((j<n) && (*IDX(cur, i, j+1, n) > EMAX)) {
+            if (*IDX(cur, i, j+1, n) > EMAX) {
                 F += FDELTA;
             }
             /* Idem per il vicino in alto */
-            if ((i>0) && (*IDX(cur, i-1, j, n) > EMAX)) {
+            if (*IDX(cur, i-1, j, n) > EMAX) {
                 F += FDELTA;
             }
             /* Idem per il vicino in basso */
-            if ((i<n) && (*IDX(cur, i+1, j, n) > EMAX)) {
+            if (*IDX(cur, i+1, j, n) > EMAX) {
                 F += FDELTA;
             }
 
@@ -220,7 +231,7 @@ int main(int argc, char* argv[])
         n = strtol(argv[2], &pEnd, 10);
     }
 
-    const size_t size = n * n * sizeof(float);
+    const size_t size = (n + 2) * (n + 2) * sizeof(float);
 
     /* Allochiamo i domini */
     cur = (float *) malloc(size); assert(cur);
