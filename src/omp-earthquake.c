@@ -104,10 +104,9 @@ void setup(float* grid, int n, float fmin, float fmax)
  */
 void increment_energy(float *grid, int n, float delta)
 {
-    int i, j;
-#pragma omp parallel for collapse(2) private(j)
-    for (i = 0; i < n; i++) {
-        for (j = 0; j < n; j++) {
+#pragma omp parallel for default(none) shared(grid, n, delta) schedule(runtime)
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
             *IDX(grid, i, j, n) += delta;
         }
     }
@@ -120,6 +119,7 @@ void increment_energy(float *grid, int n, float delta)
 int count_cells(float *grid, int n)
 {
     int c = 0;
+#pragma omp parallel for default(none) reduction(+:c) shared(grid, n) schedule(runtime)
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             if (*IDX(grid, i, j, n) > EMAX) {
@@ -139,6 +139,7 @@ int count_cells(float *grid, int n)
 void propagate_energy(float *cur, float *next, int n)
 {
     const float FDELTA = EMAX/4;
+#pragma omp parallel for default(none) schedule(runtime) shared(n, cur, next)
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             float F = *IDX(cur, i, j, n);
@@ -184,6 +185,7 @@ void propagate_energy(float *cur, float *next, int n)
 float average_energy(float *grid, int n)
 {
     float sum = 0.0f;
+#pragma omp parallel for reduction(+:sum) default(none) shared(grid) firstprivate(n) schedule(runtime)
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             sum += *IDX(grid, i, j, n);
