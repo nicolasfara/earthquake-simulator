@@ -91,7 +91,7 @@ float randab(float a, float b)
 void setup(float* grid, int n, float fmin, float fmax)
 {
     int ghost_n = n + 2;
-#pragma omp parallel for default(none) shared(grid, ghost_n, n)
+#pragma omp parallel for default(none) shared(grid, ghost_n, n) //schedule(runtime)
     for(int j = 0; j < ghost_n; j++) {
         // righe
         *IDX(grid, 0, j, ghost_n) = 0;
@@ -115,7 +115,7 @@ void setup(float* grid, int n, float fmin, float fmax)
  */
 void increment_energy(float *grid, int n, float delta)
 {
-#pragma omp parallel for default(none) shared(grid, n, delta) schedule(runtime)
+#pragma omp parallel for default(none) shared(grid, n, delta) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
         for (int j = 1; j < n + 1; j++) {
             *IDX(grid, i, j, n) += delta;
@@ -130,7 +130,7 @@ void increment_energy(float *grid, int n, float delta)
 int count_cells(float *grid, int n)
 {
     int c = 0;
-#pragma omp parallel for default(none) reduction(+:c) shared(grid, n) schedule(runtime)
+#pragma omp parallel for reduction(+:c) default(none) shared(grid, n) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
         for (int j = 1; j < n + 1; j++) {
             if (*IDX(grid, i, j, n) > EMAX) {
@@ -150,7 +150,7 @@ int count_cells(float *grid, int n)
 void propagate_energy(float *cur, float *next, int n)
 {
     const float FDELTA = EMAX/4;
-#pragma omp parallel for default(none) schedule(runtime) shared(n, cur, next)
+#pragma omp parallel for default(none) shared(n, cur, next) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
         for (int j = 1; j < n + 1; j++) {
             float F = *IDX(cur, i, j, n);
@@ -196,7 +196,7 @@ void propagate_energy(float *cur, float *next, int n)
 float average_energy(float *grid, int n)
 {
     float sum = 0.0f;
-#pragma omp parallel for reduction(+:sum) default(none) shared(grid) firstprivate(n) schedule(runtime)
+#pragma omp parallel for reduction(+:sum) default(none) shared(grid) firstprivate(n) //schedule(runtime)
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             sum += *IDX(grid, i, j, n);
