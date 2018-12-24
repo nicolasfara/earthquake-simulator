@@ -51,6 +51,7 @@
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>     /* rand() */
+#include <x86intrin.h>
 
 /* energia massima */
 #define EMAX 4.0f
@@ -58,6 +59,10 @@
 #define EDELTA 1e-4
 /* pre-defined seed for pseudo random initialization */
 #define SEED 19
+
+typedef float v4f __attribute__((vector_size(16)));
+#define VLEN (sizeof(v4f)/sizeof(float))
+
 
 /**
  * Restituisce un puntatore all'elemento di coordinate (i,j) del
@@ -113,12 +118,13 @@ void setup(float* grid, int n, float fmin, float fmax)
  * n*n. Questa funzione realizza il passo 1 descritto nella specifica
  * del progetto.
  */
-void increment_energy(float *grid, int n, float delta)
+void increment_energy(float* grid, int n, float delta)
 {
 #pragma omp parallel for default(none) shared(grid, n, delta) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
-        for (int j = 1; j < n + 1; j++) {
-            *IDX(grid, i, j, n) += delta;
+        for (int j = 1; j < n + 1; j ++) {
+            float *ptr = grid + i*n + j;
+            *ptr += delta;
         }
     }
 }
@@ -150,11 +156,47 @@ int count_cells(float *grid, int n)
 void propagate_energy(float *cur, float *next, int n)
 {
     const float FDELTA = EMAX/4;
+    //const __m128 fdelta = _mm_set1_ps(FDELTA);
+    //const __m128 emax = _mm_set1_ps(EMAX);
 #pragma omp parallel for default(none) shared(n, cur, next) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
-        for (int j = 1; j < n + 1; j++) {
+        for (int j = 1; j < n - VLEN + 2; j += VLEN) {
+
             float F = *IDX(cur, i, j, n);
+            //float tmp_F = *IDX(cur, i, j, n);
             float *out = IDX(next, i, j, n);
+
+            //__m128 m_F, mask, cond, res;
+
+            //// sinistra
+            //m_F = _mm_load_ps(IDX(cur, i, j-1, n));
+            //mask = _mm_cmpgt_ps(m_F, fdelta); //compare m_F > FDELTA
+            //cond = _mm_or_ps(_mm_and_ps(mask, fdelta), _mm_andnot_ps(mask, _mm_set1_ps(0.0f)));
+            //res = _mm_add_ps(cond, _mm_set1_ps(*IDX(cur, i, j, n))); //compute the result
+            //_mm_store_ps(&tmp_F, res);
+
+
+            //// destra
+            //m_F = _mm_load_ps(IDX(cur, i, j+1, n));
+            //mask = _mm_cmpgt_ps(m_F, fdelta); //compare m_F > FDELTA
+            //cond = _mm_or_ps(_mm_and_ps(mask, fdelta), _mm_andnot_ps(mask, _mm_set1_ps(0.0f)));
+            //res = _mm_add_ps(cond, _mm_set1_ps(*IDX(cur, i, j, n))); //compute the result
+            //_mm_store_ps(&tmp_F, res);
+
+
+            //// alto
+            //m_F = _mm_load_ps(IDX(cur, i-1, j, n));
+            //mask = _mm_cmpgt_ps(m_F, fdelta); //compare m_F > FDELTA
+            //cond = _mm_or_ps(_mm_and_ps(mask, fdelta), _mm_andnot_ps(mask, _mm_set1_ps(0.0f)));
+            //res = _mm_add_ps(cond, _mm_set1_ps(*IDX(cur, i, j, n))); //compute the result
+            //_mm_store_ps(&tmp_F, res);
+
+            //// basso
+            //m_F = _mm_load_ps(IDX(cur, i+1, j, n));
+            //mask = _mm_cmpgt_ps(m_F, fdelta); //compare m_F > FDELTA
+            //cond = _mm_or_ps(_mm_and_ps(mask, fdelta), _mm_andnot_ps(mask, _mm_set1_ps(0.0f)));
+            //res = _mm_add_ps(cond, _mm_set1_ps(*IDX(cur, i, j, n))); //compute the result
+            //_mm_store_ps(&tmp_F, res);
 
             /* Se l'energia del vicino di sinistra (se esiste) e'
                maggiore di EMAX, allora la cella (i,j) ricevera'
