@@ -13,3 +13,20 @@ perf stat -e cache-references,cache-misses -r 5 ./omp-earthquake 100000 256 > ou
 
             4.5009 +- 0.0267 seconds time elapsed  ( +-  0.59% )
 
+###################################
+##### WITH -ffast-math active #####
+###################################
+
+perf stat -e cache-references,cache-misses -r 5 ./omp-earthquake 100000 256 > out
+./omp-earthquake : 6553.6000 Mupdates in 1.6092 seconds (4072.519305 Mupd/sec)
+./omp-earthquake : 6553.6000 Mupdates in 1.4960 seconds (4380.834608 Mupd/sec)
+./omp-earthquake : 6553.6000 Mupdates in 1.5826 seconds (4140.971790 Mupd/sec)
+./omp-earthquake : 6553.6000 Mupdates in 1.4973 seconds (4376.821431 Mupd/sec)
+./omp-earthquake : 6553.6000 Mupdates in 1.4970 seconds (4377.703017 Mupd/sec)
+
+ Performance counter stats for './omp-earthquake 100000 256' (5 runs):
+
+       830,384,198      cache-references:u                                            ( +-  0.65% )
+            36,065      cache-misses:u            #    0.004 % of all cache refs      ( +-  8.63% )
+
+            1.5413 +- 0.0243 seconds time elapsed  ( +-  1.58% )
