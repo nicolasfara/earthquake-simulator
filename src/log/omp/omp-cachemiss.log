@@ -1,0 +1,15 @@
+perf stat -e cache-references,cache-misses -r 5 ./omp-earthquake 100000 256 > out > log/omp/cachemiss.log
+
+./omp-earthquake : 6553.6000 Mupdates in 4.5665 seconds (1435.133282 Mupd/sec)
+./omp-earthquake : 6553.6000 Mupdates in 4.4492 seconds (1472.977682 Mupd/sec)
+./omp-earthquake : 6553.6000 Mupdates in 4.4577 seconds (1470.163857 Mupd/sec)
+./omp-earthquake : 6553.6000 Mupdates in 4.4513 seconds (1472.279747 Mupd/sec)
+./omp-earthquake : 6553.6000 Mupdates in 4.5527 seconds (1439.486041 Mupd/sec)
+
+ Performance counter stats for './omp-earthquake 100000 256' (5 runs):
+
+       826,379,736      cache-references:u                                            ( +-  7.65% )
+            94,701      cache-misses:u            #    0.011 % of all cache refs      ( +- 23.74% )
+
+            4.5009 +- 0.0267 seconds time elapsed  ( +-  0.59% )
+

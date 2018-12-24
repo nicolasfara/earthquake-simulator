@@ -234,8 +234,10 @@ int main(int argc, char* argv[])
     const size_t size = (n + 2) * (n + 2) * sizeof(float);
 
     /* Allochiamo i domini */
-    cur = (float *) malloc(size); assert(cur);
-    next = (float *) malloc(size); assert(next);
+    //cur = (float *) malloc(size); assert(cur);
+    //next = (float *) malloc(size); assert(next);
+    posix_memalign((void **)&cur, __BIGGEST_ALIGNMENT__, size);
+    posix_memalign((void **)&next, __BIGGEST_ALIGNMENT__, size);
 
     /* L'energia iniziale di ciascuna cella e' scelta
        con probabilita' uniforme nell'intervallo [0, EMAX*0.1] */

@@ -25,11 +25,12 @@
 ## make plot    produce il grafico di esempio usando la versione seriale
 
 EXE_OMP:=$(basename $(wildcard omp-*.c))
+EXE_OMP_SIMD:=$(basename $(wildcard omp-*.c))
 EXE_MPI:=$(basename $(wildcard mpi-*.c))
 EXE_CUDA:=$(basename $(wildcard cuda-*.cu))
 EXE_SERIAL:=earthquake
-EXE:=$(EXE_OMP) $(EXE_MPI) $(EXE_SERIAL) $(EXE_CUDA)
-CFLAGS+=-std=c99 -march=native -ftree-vectorize -fopt-info-vec-optimized -fopt-info-vec-missed -Wall -Wpedantic -O2 -D_XOPEN_SOURCE=600
+EXE:=$(EXE_OMP) $(EXE_OMP_SIMD) $(EXE_MPI) $(EXE_SERIAL) $(EXE_CUDA)
+CFLAGS+=-std=c99 -Wall -Wpedantic -O2 -D_XOPEN_SOURCE=600
 NVCC:=nvcc
 NVCFLAGS+=-Wno-deprecated-gpu-targets
 
@@ -43,6 +44,11 @@ ALL: $(EXE)
 $(EXE_OMP): CFLAGS+=-fopenmp
 $(EXE_OMP): LDLIBS+=-lgomp
 openmp: $(EXE_OMP)
+
+$(EXE_OMP_SIMD): CFLAGS+=-march=native -ftree-vectorize -fopt-info-vec-optimized -fopt-info-vec-missed
+$(EXE_OMP_SIMD): CFLAGS+=-fopenmp
+$(EXE_OMP_SIMD): LDLIBS+=-lgomp
+openmp-simd: $(EXE_OMP_SIMD)
 
 $(EXE_MPI): CC=mpicc
 mpi: $(EXE_MPI)

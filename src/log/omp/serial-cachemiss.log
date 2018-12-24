@@ -1,0 +1,15 @@
+perf stat -e cache-references,cache-misses -r 5 ./earthquake 100000 256 > out          
+
+./earthquake : 6553.6000 Mupdates in 25.8812 seconds (253.218879 Mupd/sec)
+./earthquake : 6553.6000 Mupdates in 25.6959 seconds (255.044198 Mupd/sec)
+./earthquake : 6553.6000 Mupdates in 25.7301 seconds (254.705939 Mupd/sec)
+./earthquake : 6553.6000 Mupdates in 25.6727 seconds (255.274948 Mupd/sec)
+./earthquake : 6553.6000 Mupdates in 25.9793 seconds (252.262535 Mupd/sec)
+
+ Performance counter stats for './earthquake 100000 256' (5 runs):
+
+     3,003,323,022      cache-references:u                                            ( +-  1.43% )
+            56,222      cache-misses:u            #    0.002 % of all cache refs      ( +- 29.94% )
+
+           25.7929 +- 0.0593 seconds time elapsed  ( +-  0.23% )
+
