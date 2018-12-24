@@ -60,9 +60,6 @@
 /* pre-defined seed for pseudo random initialization */
 #define SEED 19
 
-typedef float v4f __attribute__((vector_size(16)));
-#define VLEN (sizeof(v4f)/sizeof(float))
-
 
 /**
  * Restituisce un puntatore all'elemento di coordinate (i,j) del
@@ -122,9 +119,8 @@ void increment_energy(float* grid, int n, float delta)
 {
 #pragma omp parallel for default(none) shared(grid, n, delta) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
-        for (int j = 1; j < n + 1; j ++) {
-            float *ptr = grid + i*n + j;
-            *ptr += delta;
+        for (int j = 1; j < n + 1; j++) {
+            *IDX(grid, i, j, n) += delta;
         }
     }
 }
@@ -160,7 +156,7 @@ void propagate_energy(float *cur, float *next, int n)
     //const __m128 emax = _mm_set1_ps(EMAX);
 #pragma omp parallel for default(none) shared(n, cur, next) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
-        for (int j = 1; j < n - VLEN + 2; j += VLEN) {
+        for (int j = 1; j < n + 1; j ++) {
 
             float F = *IDX(cur, i, j, n);
             //float tmp_F = *IDX(cur, i, j, n);
