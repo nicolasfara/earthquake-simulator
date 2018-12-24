@@ -118,7 +118,8 @@ void increment_energy(float *grid, int n, float delta)
 #pragma omp parallel for default(none) shared(grid, n, delta) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
         for (int j = 1; j < n + 1; j++) {
-            *IDX(grid, i, j, n) += delta;
+            float *gr = grid + i*n + j;
+            *gr += delta;
         }
     }
 }
