@@ -30,7 +30,7 @@ EXE_MPI:=$(basename $(wildcard mpi-*.c))
 EXE_CUDA:=$(basename $(wildcard cuda-*.cu))
 EXE_SERIAL:=earthquake
 EXE:=$(EXE_OMP) $(EXE_OMP_SIMD) $(EXE_MPI) $(EXE_SERIAL) $(EXE_CUDA)
-CFLAGS+=-std=c99 -Wall -Wpedantic -O2 -D_XOPEN_SOURCE=600
+CFLAGS+=-std=c99 -Wall -Wpedantic -O3 -D_XOPEN_SOURCE=600
 NVCC:=nvcc
 NVCFLAGS+=-Wno-deprecated-gpu-targets
 
