@@ -268,6 +268,9 @@ int main(int argc, char* argv[])
     free(cur);
     free(next);
 
+    cudaFree(d_cur);
+    cudaFree(d_next);
+
     return EXIT_SUCCESS;
 }
 
