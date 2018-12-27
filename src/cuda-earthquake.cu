@@ -59,13 +59,14 @@
 #define EDELTA 1e-4
 /* pre-defined seed for pseudo random initialization */
 #define SEED 19
+#define BLKDIM 32
 
 
 /**
  * Restituisce un puntatore all'elemento di coordinate (i,j) del
  * dominio grid con n colonne.
  */
-static inline float *IDX(float *grid, int i, int j, int n)
+__device__ __host__ float *IDX(float *grid, int i, int j, int n)
 {
     return (grid + i*n + j);
 }
@@ -114,13 +115,19 @@ void setup(float* grid, int n, float fmin, float fmax)
  * n*n. Questa funzione realizza il passo 1 descritto nella specifica
  * del progetto.
  */
-void increment_energy(float* grid, int n, float delta)
+__global__ void increment_energy(float* grid, int n, float delta)
 {
-    for (int i = 1; i < n + 1; i++) {
-        for (int j = 1; j < n + 1; j++) {
-            *IDX(grid, i, j, n) += delta;
-        }
+    const int i = threadIdx.x + blockIdx.x * (blockDim.x - 2);
+    const int j = threadIdx.y + blockIdx.y * (blockDim.y - 2);
+
+    if (i > 0 && i < blockDim.x - 1 && j > 0 && j < blockDim.y - 1) {
+        *IDX(grid, i, j, n) += delta;
     }
+    //for (int i = 1; i < n + 1; i++) {
+    //    for (int j = 1; j < n + 1; j++) {
+    //        *IDX(grid, i, j, n) += delta;
+    //    }
+    //}
 }
 
 /**
@@ -195,8 +202,8 @@ void propagate_energy(float *cur, float *next, int n)
 float average_energy(float *grid, int n)
 {
     float sum = 0.0f;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    for (int i = 1; i < n + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
             sum += *IDX(grid, i, j, n);
         }
     }
@@ -245,10 +252,13 @@ int main(int argc, char* argv[])
 
     cudaMemcpy(d_cur, cur, size, cudaMemcpyHostToDevice);
 
+    dim3 block(BLKDIM, BLKDIM);
+    dim3 grid((n + BLKDIM - 3) / (BLKDIM - 2), (n + BLKDIM - 3) / (BLKDIM - 2));
+
     const double tstart = hpc_gettime();
     for (s = 0; s < nsteps; s++) {
         /* L'ordine delle istruzioni che seguono e' importante */
-        increment_energy(cur, n, EDELTA);
+        increment_energy<<<block, grid>>>(d_cur, n, EDELTA);
         c = count_cells(cur, n);
         propagate_energy(cur, next, n);
         Emean = average_energy(next, n);
