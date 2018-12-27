@@ -235,8 +235,8 @@ float average_energy(float *grid, int n)
 {
     float sum = 0.0f;
 #pragma omp parallel for reduction(+:sum) default(none) shared(grid) firstprivate(n) //schedule(runtime)
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    for (int i = 1; i < n + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
             sum += *IDX(grid, i, j, n);
         }
     }
