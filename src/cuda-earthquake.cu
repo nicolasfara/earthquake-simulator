@@ -55,7 +55,7 @@ __global__ void increment_energy(float *grid, int n, float delta)
  * Restituisce il numero di celle la cui energia e' strettamente
  * maggiore di EMAX.
  */
-__global__ void count_cells(float *grid, int n, int *res)
+__global__ void count_cells(float *grid, int n, int *res, int s)
 {
     //extern __shared__ int sdata[];
 
@@ -82,11 +82,11 @@ __global__ void count_cells(float *grid, int n, int *res)
     ////std::cout << "Count: " << count << std::endl;
     //return count;
     const int i = threadIdx.x + blockDim.x * blockIdx.x;
-    if (i == 0) *res = 0;
+    if (i == 0) res[s] = 0;
 
     if (i < n*n) {
         if (grid[i] > EMAX) {
-            atomicAdd(res, 1);
+            atomicAdd(&res[s], 1);
         }
     }
 }
@@ -99,30 +99,36 @@ __global__ void count_cells(float *grid, int n, int *res)
  */
 __global__ void propagate_energy(float *cur, float *next, int n)
 {
+    __shared__ float data[BLKSIZE];
     const float FDELTA = EMAX/4;
     const int i = threadIdx.x + blockIdx.x * blockDim.x;
     const int j = threadIdx.y + blockIdx.y * blockDim.y;
+    const int ti = threadIdx.x;
+    const int tj = threadIdx.y;
 
     if (i < n && j < n) {
-        float F = *IDX(cur, i, j, n);
+        *IDX(data, ti, tj, BLKDIM) = *IDX(cur, i, j, n);
+        __syncthreads();
+
+        float F = *IDX(data, ti, tj, BLKDIM);
         float *out = IDX(next, i, j, n);
 
         /* Se l'energia del vicino di sinistra (se esiste) e'
            maggiore di EMAX, allora la cella (i,j) ricevera'
            energia addizionale FDELTA = EMAX/4 */
-        if (j>0 && *IDX(cur, i, j-1, n) > EMAX) {
+        if (tj>0 && *IDX(data, ti, tj-1, BLKDIM) > EMAX) {
             F += FDELTA;
         }
         /* Idem per il vicino di destra */
-        if (j<n-1 && *IDX(cur, i, j+1, n) > EMAX) {
+        if (tj<BLKDIM-1 && *IDX(data, ti, tj+1, BLKDIM) > EMAX) {
             F += FDELTA;
         }
         /* Idem per il vicino in alto */
-        if (i>0 && *IDX(cur, i-1, j, n) > EMAX) {
+        if (ti>0 && *IDX(data, ti-1, tj, BLKDIM) > EMAX) {
             F += FDELTA;
         }
         /* Idem per il vicino in basso */
-        if (i<n-1 && *IDX(cur, i+1, j, n) > EMAX) {
+        if (ti<BLKDIM-1 && *IDX(data, ti+1, tj, BLKDIM) > EMAX) {
             F += FDELTA;
         }
 
@@ -143,7 +149,7 @@ __global__ void propagate_energy(float *cur, float *next, int n)
  * Restituisce l'energia media delle celle del dominio grid di
  * dimensioni n*n. Il dominio non viene modificato.
  */
-__global__ void average_energy(float* grid, int n, float *res)
+__global__ void average_energy(float* grid, int n, float *res, int s)
 {
     extern __shared__ float data[];
 
@@ -156,7 +162,7 @@ __global__ void average_energy(float* grid, int n, float *res)
         data[tid] = 0.0f;
     }
 
-    if (i == 0) *res = 0.0f;
+    if (i == 0) res[s] = 0.0f;
 
     __syncthreads();
 
@@ -169,15 +175,13 @@ __global__ void average_energy(float* grid, int n, float *res)
     }
 
     if (tid == 0) {
-        atomicAdd(res, data[0]);
+        atomicAdd(&res[s], data[0]);
     }
 }
 
 int main(int argc, char* argv[])
 {
     int n = 256, nsteps = 2048;
-    int c;
-    float emean;
     srand(SEED); /* Inizializzazione del generatore pseudocasuale */
 
     if ( argc > 3 ) {
@@ -221,23 +225,25 @@ int main(int argc, char* argv[])
     }
     const dim3 c_grid(out_elem, 1, 1);
 
+    float *emean = (float *) malloc(sizeof(float)*nsteps); assert(emean);
+    int *c = (int *) malloc(sizeof(int)*nsteps); assert(c);
+
     int *d_c;
     float *d_emean;
-    cudaSafeCall(cudaMalloc((void **) &d_c, sizeof(int)));
-    cudaSafeCall(cudaMalloc((void **) &d_emean, sizeof(float)));
+    cudaSafeCall(cudaMalloc((void **) &d_c, sizeof(int)*nsteps));
+    cudaSafeCall(cudaMalloc((void **) &d_emean, sizeof(float)*nsteps));
+
+    const size_t sum_buff_size = sizeof(float) * BLKSIZE;
 
     const double tstart = hpc_gettime();
     for (int s = 0; s < nsteps; s++) {
         /* stuff */
         increment_energy<<<grid2, block2>>>(d_cur, n, EDELTA);
-        count_cells<<<grid1, block1>>>(d_cur, n, d_c);
+        count_cells<<<grid1, block1>>>(d_cur, n, d_c, s);
         propagate_energy<<<grid2, block2>>>(d_cur, d_next, n);
-        average_energy<<<c_grid, c_block, 2*BLKSIZE*sizeof(float)>>>(d_next, n, d_emean);
+        average_energy<<<c_grid, c_block, sum_buff_size>>>(d_next, n, d_emean, s);
 
-        cudaSafeCall(cudaMemcpy(&c, d_c, sizeof(int), cudaMemcpyDeviceToHost));
-        cudaSafeCall(cudaMemcpy(&emean, d_emean, sizeof(float), cudaMemcpyDeviceToHost));
-
-        printf("%d %f\n", c, emean/(n*n));
+        //printf("%d %f\n", c, emean/(n*n));
 
         float *tmp = d_cur;
         d_cur = d_next;
@@ -245,12 +251,21 @@ int main(int argc, char* argv[])
     }
     const double elapsed = hpc_gettime() - tstart;
 
+    cudaSafeCall(cudaMemcpy(c, d_c, sizeof(int)*nsteps, cudaMemcpyDeviceToHost));
+    cudaSafeCall(cudaMemcpy(emean, d_emean, sizeof(float)*nsteps, cudaMemcpyDeviceToHost));
+
+    for (int s = 0; s < nsteps; s++) {
+        printf("%d %f\n", c[s], emean[s]/(n*n));
+    }
+
     /* milioni di celle aggiornate per ogni secondo di wall clock time */
     double Mupdates = (((double) n) * n / 1.0e6) * nsteps;
     fprintf(stderr, "%s : %.4f Mupdates in %.4f seconds (%f Mupd/sec)\n", argv[0], Mupdates, elapsed, Mupdates/elapsed);
 
     free(cur);
     free(next);
+    free(emean);
+    free(c);
     cudaFree(d_cur);
     cudaFree(d_next);
     cudaFree(d_c);
