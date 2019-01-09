@@ -148,7 +148,7 @@ void propagate_energy(float *cur, float *next, int n)
                 F += FDELTA;
             }
             /* Idem per il vicino di destra */
-            if ((j<n) && (*IDX(cur, i, j+1, n) > EMAX)) {
+            if ((j<n-1) && (*IDX(cur, i, j+1, n) > EMAX)) {
                 F += FDELTA;
             }
             /* Idem per il vicino in alto */
@@ -156,7 +156,7 @@ void propagate_energy(float *cur, float *next, int n)
                 F += FDELTA;
             }
             /* Idem per il vicino in basso */
-            if ((i<n) && (*IDX(cur, i+1, j, n) > EMAX)) {
+            if ((i<n-1) && (*IDX(cur, i+1, j, n) > EMAX)) {
                 F += FDELTA;
             }
 
