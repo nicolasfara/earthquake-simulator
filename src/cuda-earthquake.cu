@@ -150,7 +150,11 @@ __global__ void average_energy(float* grid, int n, float *res)
     unsigned int tid = threadIdx.x;
     unsigned int i = blockIdx.x * (blockDim.x*2) + threadIdx.x;
 
-    data[tid] = grid[i] + grid[i+blockDim.x];
+    if (i < n*n) {
+        data[tid] = grid[i] + grid[i+blockDim.x];
+    } else { //padding memory
+        data[tid] = 0.0f;
+    }
 
     if (i == 0) *res = 0.0f;
 
@@ -228,7 +232,7 @@ int main(int argc, char* argv[])
         increment_energy<<<grid2, block2>>>(d_cur, n, EDELTA);
         count_cells<<<grid1, block1>>>(d_cur, n, d_c);
         propagate_energy<<<grid2, block2>>>(d_cur, d_next, n);
-        average_energy<<<c_grid, c_block, BLKSIZE*sizeof(float)>>>(d_next, n, d_emean);
+        average_energy<<<c_grid, c_block, 2*BLKSIZE*sizeof(float)>>>(d_next, n, d_emean);
 
         cudaSafeCall(cudaMemcpy(&c, d_c, sizeof(int), cudaMemcpyDeviceToHost));
         cudaSafeCall(cudaMemcpy(&emean, d_emean, sizeof(float), cudaMemcpyDeviceToHost));
