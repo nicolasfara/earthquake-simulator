@@ -58,7 +58,7 @@ __global__ void increment_energy(float *grid, int ext_n, float delta)
  * Restituisce il numero di celle la cui energia e' strettamente
  * maggiore di EMAX.
  */
-__global__ void count_cells(float *grid, int ext_n, int *res, int s)
+__global__ void count_cells(float *grid, size_t ext_n, int *res, unsigned int s)
 {
     //extern __shared__ int sdata[];
 
@@ -100,7 +100,7 @@ __global__ void count_cells(float *grid, int ext_n, int *res, int s)
  * che conterra' il nuovo valore delle energie. Questa funzione
  * realizza il passo 2 descritto nella specifica del progetto.
  */
-__global__ void propagate_energy(float *cur, float *next, int ext_n)
+__global__ void propagate_energy(float *cur, float *next, size_t ext_n)
 {
     //__shared__ float data[BLKDIM][BLKDIM];
     const float FDELTA = EMAX/4;
@@ -159,14 +159,14 @@ __global__ void propagate_energy(float *cur, float *next, int ext_n)
  * Restituisce l'energia media delle celle del dominio grid di
  * dimensioni n*n. Il dominio non viene modificato.
  */
-__global__ void average_energy(float* grid, int ext_n, float *res, int s)
+/*__global__ void average_energy(float* grid, size_t ext_elem, float *res, unsigned int s)
 {
     extern __shared__ float data[];
 
     unsigned int tid = threadIdx.x;
     unsigned int i = blockIdx.x * (blockDim.x*2) + threadIdx.x;
 
-    if (i < ext_n*ext_n) {
+    if (i < ext_elem) {
         data[tid] = grid[i] + grid[i+blockDim.x];
     } else { //padding memory
         data[tid] = 0.0f;
@@ -176,9 +176,9 @@ __global__ void average_energy(float* grid, int ext_n, float *res, int s)
 
     __syncthreads();
 
-    for (unsigned int s = blockDim.x/2; s > 0; s >>= 1) {
-        if (tid < s) {
-            data[tid] += data[tid + s];
+    for (unsigned int r = blockDim.x/2; r > 0; r >>= 1) {
+        if (tid < r) {
+            data[tid] += data[tid + r];
         }
 
         __syncthreads();
@@ -187,7 +187,67 @@ __global__ void average_energy(float* grid, int ext_n, float *res, int s)
     if (tid == 0) {
         atomicAdd(&res[s], data[0]);
     }
+}*/
+
+__global__ void average_energy(float* grid, size_t ext_elem, float *res, unsigned int s) {
+    extern __shared__ float local_sum[];
+    const unsigned int lindex = threadIdx.x;
+    const unsigned int gindex = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned int bsize = blockDim.x / 2;
+
+    if (gindex == 0)
+        res[s] = 0.0f;
+
+    if (gindex < ext_elem) {
+        local_sum[lindex] = grid[gindex];
+    } else {
+        local_sum[lindex] = 0.0f;
+    }
+    __syncthreads();
+
+    while (bsize > 0) {
+        if (lindex < bsize) {
+            local_sum[lindex] += local_sum[lindex + bsize];
+        }
+        bsize /= 2;
+        __syncthreads();
+    }
+    if (lindex == 0) {
+        atomicAdd(&res[s], local_sum[0]);
+    }
 }
+
+/*template <unsigned int blockSize>
+__device__ void warpReduce(volatile float* sdata, unsigned int tid) {
+    if (blockSize >= 64) sdata[tid] += sdata[tid+32];
+    if (blockSize >= 32) sdata[tid] += sdata[tid+16];
+    if (blockSize >= 16) sdata[tid] += sdata[tid+ 8];
+    if (blockSize >=  8) sdata[tid] += sdata[tid+ 4];
+    if (blockSize >=  4) sdata[tid] += sdata[tid+ 2];
+    if (blockSize >=  2) sdata[tid] += sdata[tid+ 1];
+}
+
+template <unsigned int blockSize>
+__global__ void reduce(float* g_idata, float* g_odata, size_t n, unsigned int s) {
+    extern __shared__ float sdata[];
+    unsigned int tid = threadIdx.x;
+    unsigned int i = blockIdx.x*(blockSize*2) + tid;
+    unsigned int gridSize = blockSize*2*gridDim.x;
+    sdata[tid] = 0.0f;
+
+    while (i < n) {
+        sdata[tid] += g_idata[i] + g_idata[i+blockSize];
+        i += gridSize;
+    }
+    __syncthreads();
+
+    if (blockSize >= 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
+    if (blockSize >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
+    if (blockSize >= 128) { if (tid < 64) { sdata[tid] += sdata[tid + 64]; } __syncthreads(); }
+
+    if (tid < 32) warpReduce<64>(sdata, tid);
+    if (tid == 0) atomicAdd(&g_odata[s], sdata[0]);
+}*/
 
 __global__ void halo_top_bottom(float* grid, int ext_n) {
     int j = threadIdx.x + blockIdx.x * blockDim.x;
@@ -227,6 +287,7 @@ int main(int argc, char* argv[])
 
     const size_t ext_n = n+2;
     const size_t ext_size = (ext_n) * (ext_n) * sizeof(float);
+    const size_t ext_elem = (ext_n) * (ext_n);
 
     float *cur = (float *) malloc(ext_size); assert(cur);
     float *next = (float *) malloc(ext_size); assert(next);
@@ -262,35 +323,34 @@ int main(int argc, char* argv[])
     halo_top_bottom<<<grid1, block1>>>(d_next, ext_n);
     halo_left_right<<<grid1, block1>>>(d_next, ext_n);
 
-    const dim3 c_block(BLKSIZE, 1, 1);
+    const dim3 c_block(BLKSIZE);
     int out_elem = ext_n*ext_n / (BLKSIZE/2);
-    if ((ext_n*ext_n) % BLKSIZE/2) {
+    if ((ext_n*ext_n) % (BLKSIZE/2)) {
         out_elem++;
     }
-    const dim3 c_grid(out_elem, 1, 1);
+    const dim3 c_grid(out_elem);
 
     const size_t sum_buff_size = sizeof(float) * BLKSIZE;
 
     const double tstart = hpc_gettime();
-    for (int s = 0; s < nsteps; s++) {
+    for (unsigned int s = 0; s < nsteps; s++) {
         /* stuff */
         increment_energy<<<grid2, block2>>>(d_cur, ext_n, EDELTA);
         count_cells<<<grid1, block1>>>(d_cur, ext_n, d_c, s);
         propagate_energy<<<grid2, block2>>>(d_cur, d_next, ext_n);
-        average_energy<<<c_grid, c_block, sum_buff_size>>>(d_next, ext_n, d_emean, s);
-
-        //printf("%d %f\n", c, emean/(n*n));
+        average_energy<<<c_grid, c_block, sum_buff_size>>>(d_next, ext_elem, d_emean, s);
 
         float *tmp = d_cur;
         d_cur = d_next;
         d_next = tmp;
     }
+    cudaDeviceSynchronize();
     const double elapsed = hpc_gettime() - tstart;
 
     cudaSafeCall(cudaMemcpy(c, d_c, sizeof(int)*nsteps, cudaMemcpyDeviceToHost));
     cudaSafeCall(cudaMemcpy(emean, d_emean, sizeof(float)*nsteps, cudaMemcpyDeviceToHost));
 
-    for (int s = 0; s < nsteps; s++) {
+    for (unsigned int s = 0; s < nsteps; s++) {
         printf("%d %f\n", c[s], emean[s]/(n*n));
     }
 
