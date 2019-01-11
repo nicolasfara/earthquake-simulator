@@ -107,9 +107,6 @@ __global__ void propagate_energy(float *cur, float *next, size_t ext_n)
     const int i = 1 + threadIdx.x + blockIdx.x * blockDim.x;
     const int j = 1 + threadIdx.y + blockIdx.y * blockDim.y;
 
-    const int ti = threadIdx.x;
-    const int tj = threadIdx.y;
-
     if (i < ext_n-1 && j < ext_n-1) {
         //data[ti][tj] = *IDX(cur, i, j, ext_n);
         //__syncthreads();
@@ -155,6 +152,64 @@ __global__ void propagate_energy(float *cur, float *next, size_t ext_n)
     }
 }
 
+__global__ void propagate_energy2(float *cur, float *next, size_t ext_n)
+{
+    __shared__ float data[BLKDIM][BLKDIM];
+    const float FDELTA = EMAX/4;
+    const int i = threadIdx.x + blockIdx.x * (blockDim.x-2);
+    const int j = threadIdx.y + blockIdx.y * (blockDim.y-2);
+
+    const int ti = threadIdx.x;
+    const int tj = threadIdx.y;
+
+    if (i < ext_n && j < ext_n) {
+        data[ti][tj] = *IDX(cur, i, j, ext_n);
+        __syncthreads();
+
+        if (ti > 0 && ti < blockDim.x-1 && tj > 0 && tj < blockDim.y-1 &&
+                i < ext_n-1 && j < ext_n-1) {
+
+            //float F = *IDX(cur, i, j, ext_n);
+            float F = data[ti][tj];
+            float *out = IDX(next, i, j, ext_n);
+
+            /* Se l'energia del vicino di sinistra (se esiste) e'
+               maggiore di EMAX, allora la cella (i,j) ricevera'
+               energia addizionale FDELTA = EMAX/4 */
+            //if (*IDX(cur, i, j-1, ext_n) > EMAX) {
+            if (data[ti][tj-1] > EMAX) {
+                F += FDELTA;
+            }
+            /* Idem per il vicino di destra */
+            //if (*IDX(cur, i, j+1, ext_n) > EMAX) {
+            if (data[ti][tj+1] > EMAX) {
+                F += FDELTA;
+            }
+            /* Idem per il vicino in alto */
+            //if (*IDX(cur, i-1, j, ext_n) > EMAX) {
+            if (data[ti-1][tj] > EMAX) {
+                F += FDELTA;
+            }
+            /* Idem per il vicino in basso */
+            //if (*IDX(cur, i+1, j, ext_n) > EMAX) {
+            if (data[ti+1][tj] > EMAX) {
+                F += FDELTA;
+            }
+
+            if (F > EMAX) {
+                F -= EMAX;
+            }
+
+            /* Si noti che il valore di F potrebbe essere ancora
+               maggiore di EMAX; questo non e' un problema:
+               l'eventuale eccesso verra' rilasciato al termine delle
+               successive iterazioni fino a riportare il valore
+               dell'energia sotto la foglia EMAX. */
+            *out = F;
+        }
+    }
+}
+
 /**
  * Restituisce l'energia media delle celle del dominio grid di
  * dimensioni n*n. Il dominio non viene modificato.
@@ -189,7 +244,7 @@ __global__ void propagate_energy(float *cur, float *next, size_t ext_n)
     }
 }*/
 
-__global__ void average_energy(float* grid, size_t ext_elem, float *res, unsigned int s) {
+/*__global__ void average_energy(float* grid, size_t ext_elem, float *res, unsigned int s) {
     extern __shared__ float local_sum[];
     const unsigned int lindex = threadIdx.x;
     const unsigned int gindex = threadIdx.x + blockIdx.x * blockDim.x;
@@ -215,9 +270,9 @@ __global__ void average_energy(float* grid, size_t ext_elem, float *res, unsigne
     if (lindex == 0) {
         atomicAdd(&res[s], local_sum[0]);
     }
-}
+}*/
 
-/*template <unsigned int blockSize>
+template <unsigned int blockSize>
 __device__ void warpReduce(volatile float* sdata, unsigned int tid) {
     if (blockSize >= 64) sdata[tid] += sdata[tid+32];
     if (blockSize >= 32) sdata[tid] += sdata[tid+16];
@@ -227,8 +282,12 @@ __device__ void warpReduce(volatile float* sdata, unsigned int tid) {
     if (blockSize >=  2) sdata[tid] += sdata[tid+ 1];
 }
 
+/**
+ * Restituisce l'energia media delle celle del dominio grid di
+ * dimensioni n*n. Il dominio non viene modificato.
+ */
 template <unsigned int blockSize>
-__global__ void reduce(float* g_idata, float* g_odata, size_t n, unsigned int s) {
+__global__ void average_energy(float* g_idata, float* g_odata, size_t n, unsigned int s) {
     extern __shared__ float sdata[];
     unsigned int tid = threadIdx.x;
     unsigned int i = blockIdx.x*(blockSize*2) + tid;
@@ -245,9 +304,9 @@ __global__ void reduce(float* g_idata, float* g_odata, size_t n, unsigned int s)
     if (blockSize >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
     if (blockSize >= 128) { if (tid < 64) { sdata[tid] += sdata[tid + 64]; } __syncthreads(); }
 
-    if (tid < 32) warpReduce<64>(sdata, tid);
+    if (tid < 32) warpReduce<BLKDIM>(sdata, tid);
     if (tid == 0) atomicAdd(&g_odata[s], sdata[0]);
-}*/
+}
 
 __global__ void halo_top_bottom(float* grid, int ext_n) {
     int j = threadIdx.x + blockIdx.x * blockDim.x;
@@ -308,6 +367,8 @@ int main(int argc, char* argv[])
     dim3 grid2((ext_n + BLKDIM - 1) / BLKDIM, (ext_n + BLKDIM - 1) / BLKDIM);
     dim3 block1(BLKSIZE);
     dim3 grid1((ext_n*ext_n + BLKSIZE - 1) / BLKSIZE);
+    dim3 p_block(BLKDIM, BLKDIM);
+    dim3 p_grid((ext_n + BLKDIM - 3) / (BLKDIM-2), (ext_n + BLKDIM - 3) / (BLKDIM-2));
     /* END CUDA memory allocation */
 
     setup(cur, ext_n, 0, EMAX*0.1);
@@ -337,8 +398,10 @@ int main(int argc, char* argv[])
         /* stuff */
         increment_energy<<<grid2, block2>>>(d_cur, ext_n, EDELTA);
         count_cells<<<grid1, block1>>>(d_cur, ext_n, d_c, s);
-        propagate_energy<<<grid2, block2>>>(d_cur, d_next, ext_n);
-        average_energy<<<c_grid, c_block, sum_buff_size>>>(d_next, ext_elem, d_emean, s);
+        //propagate_energy<<<grid2, block2>>>(d_cur, d_next, ext_n);
+        propagate_energy2<<<p_grid, p_block>>>(d_cur, d_next, ext_n);
+        //average_energy<<<c_grid, c_block, sum_buff_size>>>(d_next, ext_elem, d_emean, s);
+        average_energy<BLKDIM><<<c_grid, c_block, sum_buff_size>>>(d_next, d_emean, ext_elem, s);
 
         float *tmp = d_cur;
         d_cur = d_next;
