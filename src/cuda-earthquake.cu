@@ -113,10 +113,17 @@ __global__ void propagate_energy(float *cur, float *next, size_t ext_n)
         /* Se l'energia del vicino di sinistra (se esiste) e'
            maggiore di EMAX, allora la cella (i,j) ricevera'
            energia addizionale FDELTA = EMAX/4 */
-        F += *IDX(cur, i, j-1, ext_n) > EMAX ? FDELTA : 0.0f;
-        F += *IDX(cur, i, j+1, ext_n) > EMAX ? FDELTA : 0.0f;
-        F += *IDX(cur, i-1, j, ext_n) > EMAX ? FDELTA : 0.0f;
-        F += *IDX(cur, i+1, j, ext_n) > EMAX ? FDELTA : 0.0f;
+
+        F += (float)(*IDX(cur, i, j-1, ext_n)>EMAX) * FDELTA;
+        F += (float)(*IDX(cur, i, j+1, ext_n)>EMAX) * FDELTA;
+        F += (float)(*IDX(cur, i-1, j, ext_n)>EMAX) * FDELTA;
+        F += (float)(*IDX(cur, i+1, j, ext_n)>EMAX) * FDELTA;
+
+        //F += *IDX(cur, i, j-1, ext_n) > EMAX ? FDELTA : 0.0f;
+        //F += *IDX(cur, i, j+1, ext_n) > EMAX ? FDELTA : 0.0f;
+        //F += *IDX(cur, i-1, j, ext_n) > EMAX ? FDELTA : 0.0f;
+        //F += *IDX(cur, i+1, j, ext_n) > EMAX ? FDELTA : 0.0f;
+
         //if (*IDX(cur, i, j-1, ext_n) > EMAX) {
         ////if (data[ti][tj-1] > EMAX) {
         //    F += FDELTA;
