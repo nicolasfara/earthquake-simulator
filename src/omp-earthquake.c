@@ -133,11 +133,16 @@ int count_cells(float *grid, int n)
 {
     int c = 0;
 #pragma omp parallel for reduction(+:c) default(none) shared(grid, n) //schedule(runtime)
-    for (int i = 1; i < n + 1; i++) {
-        for (int j = 1; j < n + 1; j++) {
-            if (*IDX(grid, i, j, n) > EMAX) {
-                c++;
-            }
+    //for (int i = 1; i < n + 1; i++) {
+    //    for (int j = 1; j < n + 1; j++) {
+    //        if (*IDX(grid, i, j, n) > EMAX) {
+    //            c++;
+    //        }
+    //    }
+    //}
+    for (int i = 0; i < (n+2)*(n+2); i++) {
+        if (*(grid+i) > EMAX) {
+            c++;
         }
     }
     return c;
@@ -197,21 +202,25 @@ void propagate_energy(float *cur, float *next, int n)
             /* Se l'energia del vicino di sinistra (se esiste) e'
                maggiore di EMAX, allora la cella (i,j) ricevera'
                energia addizionale FDELTA = EMAX/4 */
-            if (*IDX(cur, i, j-1, n) > EMAX) {
-                F += FDELTA;
-            }
-            /* Idem per il vicino di destra */
-            if (*IDX(cur, i, j+1, n) > EMAX) {
-                F += FDELTA;
-            }
-            /* Idem per il vicino in alto */
-            if (*IDX(cur, i-1, j, n) > EMAX) {
-                F += FDELTA;
-            }
-            /* Idem per il vicino in basso */
-            if (*IDX(cur, i+1, j, n) > EMAX) {
-                F += FDELTA;
-            }
+            F += (float)(*IDX(cur, i, j-1, n) > EMAX) * FDELTA;
+            F += (float)(*IDX(cur, i, j+1, n) > EMAX) * FDELTA;
+            F += (float)(*IDX(cur, i-1, j, n) > EMAX) * FDELTA;
+            F += (float)(*IDX(cur, i+1, j, n) > EMAX) * FDELTA;
+            //if (*IDX(cur, i, j-1, n) > EMAX) {
+            //    F += FDELTA;
+            //}
+            ///* Idem per il vicino di destra */
+            //if (*IDX(cur, i, j+1, n) > EMAX) {
+            //    F += FDELTA;
+            //}
+            ///* Idem per il vicino in alto */
+            //if (*IDX(cur, i-1, j, n) > EMAX) {
+            //    F += FDELTA;
+            //}
+            ///* Idem per il vicino in basso */
+            //if (*IDX(cur, i+1, j, n) > EMAX) {
+            //    F += FDELTA;
+            //}
 
             if (F > EMAX) {
                 F -= EMAX;
@@ -235,10 +244,13 @@ float average_energy(float *grid, int n)
 {
     float sum = 0.0f;
 #pragma omp parallel for reduction(+:sum) default(none) shared(grid) firstprivate(n) //schedule(runtime)
-    for (int i = 1; i < n + 1; i++) {
-        for (int j = 1; j < n + 1; j++) {
-            sum += *IDX(grid, i, j, n);
-        }
+    //for (int i = 1; i < n + 1; i++) {
+    //    for (int j = 1; j < n + 1; j++) {
+    //        sum += *IDX(grid, i, j, n);
+    //    }
+    //}
+    for (int i = 0; i < (n+2)*(n+2); i++) {
+        sum += *(grid+i);
     }
     return (sum / (n*n));
 }
