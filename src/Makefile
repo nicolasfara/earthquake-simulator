@@ -45,7 +45,7 @@ $(EXE_OMP): CFLAGS+=-fopenmp
 $(EXE_OMP): LDLIBS+=-lgomp
 openmp: $(EXE_OMP)
 
-$(EXE_OMP_SIMD): CFLAGS+=-march=native -ftree-vectorize -fopt-info-vec-optimized -fopt-info-vec-missed -ffast-math -funsafe-math-optimizations
+$(EXE_OMP_SIMD): CFLAGS+=-march=native -ftree-vectorize -fopt-info-vec-optimized -fopt-info-vec-missed
 $(EXE_OMP_SIMD): CFLAGS+=-fopenmp
 $(EXE_OMP_SIMD): LDLIBS+=-lgomp
 openmp-simd: $(EXE_OMP_SIMD)

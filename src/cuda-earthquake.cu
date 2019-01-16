@@ -14,6 +14,8 @@
 #define BLKDIM 32
 #define BLKSIZE 1024
 
+__constant__ float FDELTA = EMAX/4;
+
 
 __host__ __device__ float* IDX(float *grid, int i, int j, int n)
 {
@@ -100,9 +102,8 @@ __global__ void count_cells(float *grid, size_t ext_n, int *res, unsigned int s)
  * che conterra' il nuovo valore delle energie. Questa funzione
  * realizza il passo 2 descritto nella specifica del progetto.
  */
-__global__ void propagate_energy(float *cur, float *next, size_t ext_n)
+__global__ void propagate_energy(float* cur, float* next, size_t ext_n)
 {
-    const float FDELTA = EMAX/4;
     const int i = 1 + threadIdx.x + blockIdx.x * blockDim.x;
     const int j = 1 + threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -144,9 +145,11 @@ __global__ void propagate_energy(float *cur, float *next, size_t ext_n)
         //    F += FDELTA;
         //}
 
-        if (F > EMAX) {
-            F -= EMAX;
-        }
+        F -= (float)(F>EMAX) * EMAX;
+
+        //if (F > EMAX) {
+        //    F -= EMAX;
+        //}
 
         /* Si noti che il valore di F potrebbe essere ancora
            maggiore di EMAX; questo non e' un problema:
@@ -157,10 +160,9 @@ __global__ void propagate_energy(float *cur, float *next, size_t ext_n)
     }
 }
 
-__global__ void propagate_energy_shared(float *cur, float *next, size_t ext_n)
+__global__ void propagate_energy_shared(float* cur, float* next, size_t ext_n)
 {
     __shared__ float data[BLKDIM][BLKDIM];
-    const float FDELTA = EMAX/4;
     const int i = threadIdx.x + blockIdx.x * (blockDim.x-2);
     const int j = threadIdx.y + blockIdx.y * (blockDim.y-2);
 
