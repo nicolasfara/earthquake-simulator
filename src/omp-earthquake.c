@@ -51,7 +51,6 @@
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>     /* rand() */
-#include <x86intrin.h>
 
 /* energia massima */
 #define EMAX 4.0f
