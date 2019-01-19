@@ -51,7 +51,6 @@
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>     /* rand() */
-#include <x86intrin.h>
 
 /* energia massima */
 #define EMAX 4.0f
@@ -96,11 +95,11 @@ void setup(float* grid, int n, float fmin, float fmax)
 #pragma omp parallel for default(none) shared(grid, ghost_n, n) //schedule(runtime)
     for(int j = 0; j < ghost_n; j++) {
         // righe
-        *IDX(grid, 0, j, ghost_n) = 0;
-        *IDX(grid, n + 1, j, ghost_n) = 0;
+        *IDX(grid, 0, j, ghost_n) = 0.0f;
+        *IDX(grid, n + 1, j, ghost_n) = 0.0f;
         // Colonne
-        *IDX(grid, j, 0, ghost_n) = 0;
-        *IDX(grid, j, n + 1, ghost_n) = 0;
+        *IDX(grid, j, 0, ghost_n) = 0.0f;
+        *IDX(grid, j, n + 1, ghost_n) = 0.0f;
     }
     // For non parallelizzabile (randab)
     for (int i = 1; i < n + 1; i++) {
@@ -133,16 +132,11 @@ int count_cells(float *grid, int n)
 {
     int c = 0;
 #pragma omp parallel for reduction(+:c) default(none) shared(grid, n) //schedule(runtime)
-    //for (int i = 1; i < n + 1; i++) {
-    //    for (int j = 1; j < n + 1; j++) {
-    //        if (*IDX(grid, i, j, n) > EMAX) {
-    //            c++;
-    //        }
-    //    }
-    //}
-    for (int i = 0; i < (n+2)*(n+2); i++) {
-        if (*(grid+i) > EMAX) {
-            c++;
+    for (int i = 1; i < n + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
+            if (*IDX(grid, i, j, n) > EMAX) {
+                c++;
+            }
         }
     }
     return c;
@@ -157,70 +151,31 @@ int count_cells(float *grid, int n)
 void propagate_energy(float *cur, float *next, int n)
 {
     const float FDELTA = EMAX/4;
-    //const __m128 fdelta = _mm_set1_ps(FDELTA);
-    //const __m128 emax = _mm_set1_ps(EMAX);
 #pragma omp parallel for default(none) shared(n, cur, next) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
         for (int j = 1; j < n + 1; j ++) {
 
             float F = *IDX(cur, i, j, n);
-            //float tmp_F = *IDX(cur, i, j, n);
             float *out = IDX(next, i, j, n);
-
-            //__m128 m_F, mask, cond, res;
-
-            //// sinistra
-            //m_F = _mm_load_ps(IDX(cur, i, j-1, n));
-            //mask = _mm_cmpgt_ps(m_F, fdelta); //compare m_F > FDELTA
-            //cond = _mm_or_ps(_mm_and_ps(mask, fdelta), _mm_andnot_ps(mask, _mm_set1_ps(0.0f)));
-            //res = _mm_add_ps(cond, _mm_set1_ps(*IDX(cur, i, j, n))); //compute the result
-            //_mm_store_ps(&tmp_F, res);
-
-
-            //// destra
-            //m_F = _mm_load_ps(IDX(cur, i, j+1, n));
-            //mask = _mm_cmpgt_ps(m_F, fdelta); //compare m_F > FDELTA
-            //cond = _mm_or_ps(_mm_and_ps(mask, fdelta), _mm_andnot_ps(mask, _mm_set1_ps(0.0f)));
-            //res = _mm_add_ps(cond, _mm_set1_ps(*IDX(cur, i, j, n))); //compute the result
-            //_mm_store_ps(&tmp_F, res);
-
-
-            //// alto
-            //m_F = _mm_load_ps(IDX(cur, i-1, j, n));
-            //mask = _mm_cmpgt_ps(m_F, fdelta); //compare m_F > FDELTA
-            //cond = _mm_or_ps(_mm_and_ps(mask, fdelta), _mm_andnot_ps(mask, _mm_set1_ps(0.0f)));
-            //res = _mm_add_ps(cond, _mm_set1_ps(*IDX(cur, i, j, n))); //compute the result
-            //_mm_store_ps(&tmp_F, res);
-
-            //// basso
-            //m_F = _mm_load_ps(IDX(cur, i+1, j, n));
-            //mask = _mm_cmpgt_ps(m_F, fdelta); //compare m_F > FDELTA
-            //cond = _mm_or_ps(_mm_and_ps(mask, fdelta), _mm_andnot_ps(mask, _mm_set1_ps(0.0f)));
-            //res = _mm_add_ps(cond, _mm_set1_ps(*IDX(cur, i, j, n))); //compute the result
-            //_mm_store_ps(&tmp_F, res);
 
             /* Se l'energia del vicino di sinistra (se esiste) e'
                maggiore di EMAX, allora la cella (i,j) ricevera'
                energia addizionale FDELTA = EMAX/4 */
-            F += (float)(*IDX(cur, i, j-1, n) > EMAX) * FDELTA;
-            F += (float)(*IDX(cur, i, j+1, n) > EMAX) * FDELTA;
-            F += (float)(*IDX(cur, i-1, j, n) > EMAX) * FDELTA;
-            F += (float)(*IDX(cur, i+1, j, n) > EMAX) * FDELTA;
-            //if (*IDX(cur, i, j-1, n) > EMAX) {
-            //    F += FDELTA;
-            //}
-            ///* Idem per il vicino di destra */
-            //if (*IDX(cur, i, j+1, n) > EMAX) {
-            //    F += FDELTA;
-            //}
-            ///* Idem per il vicino in alto */
-            //if (*IDX(cur, i-1, j, n) > EMAX) {
-            //    F += FDELTA;
-            //}
-            ///* Idem per il vicino in basso */
-            //if (*IDX(cur, i+1, j, n) > EMAX) {
-            //    F += FDELTA;
-            //}
+            if (*IDX(cur, i, j-1, n) > EMAX) {
+                F += FDELTA;
+            }
+            /* Idem per il vicino di destra */
+            if (*IDX(cur, i, j+1, n) > EMAX) {
+                F += FDELTA;
+            }
+            /* Idem per il vicino in alto */
+            if (*IDX(cur, i-1, j, n) > EMAX) {
+                F += FDELTA;
+            }
+            /* Idem per il vicino in basso */
+            if (*IDX(cur, i+1, j, n) > EMAX) {
+                F += FDELTA;
+            }
 
             if (F > EMAX) {
                 F -= EMAX;
@@ -243,14 +198,11 @@ void propagate_energy(float *cur, float *next, int n)
 float average_energy(float *grid, int n)
 {
     float sum = 0.0f;
-#pragma omp parallel for reduction(+:sum) default(none) shared(grid) firstprivate(n) //schedule(runtime)
-    //for (int i = 1; i < n + 1; i++) {
-    //    for (int j = 1; j < n + 1; j++) {
-    //        sum += *IDX(grid, i, j, n);
-    //    }
-    //}
-    for (int i = 0; i < (n+2)*(n+2); i++) {
-        sum += *(grid+i);
+#pragma omp parallel for reduction(+:sum) default(none) shared(grid, n) //schedule(runtime)
+    for (int i = 1; i < n + 1; i++) {
+        for (int j = 1; j < n + 1; j++) {
+            sum += *IDX(grid, i, j, n);
+        }
     }
     return (sum / (n*n));
 }
@@ -284,10 +236,10 @@ int main(int argc, char* argv[])
     const size_t size = (n + 2) * (n + 2) * sizeof(float);
 
     /* Allochiamo i domini */
-    //cur = (float *) malloc(size); assert(cur);
-    //next = (float *) malloc(size); assert(next);
-    posix_memalign((void **)&cur, __BIGGEST_ALIGNMENT__, size);
-    posix_memalign((void **)&next, __BIGGEST_ALIGNMENT__, size);
+    cur = (float *) malloc(size); assert(cur);
+    next = (float *) malloc(size); assert(next);
+    //posix_memalign((void **)&cur, __BIGGEST_ALIGNMENT__, size);
+    //posix_memalign((void **)&next, __BIGGEST_ALIGNMENT__, size);
 
     /* L'energia iniziale di ciascuna cella e' scelta
        con probabilita' uniforme nell'intervallo [0, EMAX*0.1] */
