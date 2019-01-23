@@ -27,7 +27,7 @@ simd:
 	cc $(SIMDCFLAGS) $(LDLIBS) $(SIMDFLAGS) simd-earthquake.c -o $(BIN_SIMD)
 
 plot: serial
-	./$(EXE_SERIAL) 100000 256 > out
+	./$(BIN) 100000 256 > out
 	gnuplot plot.gp
 
 clean:
