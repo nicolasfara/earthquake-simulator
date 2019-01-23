@@ -135,9 +135,11 @@ void increment_energy(float* grid, int n, float delta)
 int count_cells(float *grid, int n)
 {
     int c = 0;
-#pragma omp parallel for reduction(+:c) default(none) shared(grid, n) //schedule(runtime)
-    for (int i = 1; i < n + 1; i++) {
-        for (int j = 1; j < n + 1; j++) {
+    int i, j;
+    __m256i vs;
+#pragma omp parallel for reduction(+:c) default(none) private(j, vs) shared(grid, n) //schedule(runtime)
+    for (i = 1; i < n + 1; i++) {
+        for (j = 1; j < n+1; j++) {
             if (*IDX(grid, i, j, n) > EMAX) {
                 c++;
             }
@@ -255,11 +257,26 @@ void propagate_energy(float *cur, float *next, int n)
 float average_energy(float *grid, int n)
 {
     float sum = 0.0f;
-#pragma omp parallel for reduction(+:sum) default(none) shared(grid, n) //schedule(runtime)
+    float p_sum = 0.0f;
+    //int i, j;
+    __m256 s_sum = _mm256_set_ps(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+#pragma omp parallel for simd reduction(+:sum) //default(none) private(j, s_sum) shared(grid, n) //schedule(runtime)
     for (int i = 1; i < n + 1; i++) {
-        for (int j = 1; j < n + 1; j++) {
+        //for (j = 1; j < (n + 1) - 15; j+=16) {
+        //    __m256 s1 = _mm256_loadu_ps(IDX(grid, i, j, n));
+        //    __m256 s2 = _mm256_loadu_ps(IDX(grid, i, j+8, n));
+        //    s_sum = _mm256_add_ps(s1, s_sum);
+        //    s_sum = _mm256_add_ps(s2, s_sum);
+        //}
+        //float *s_ptr = (float *)&s_sum;
+        ////if (i == 1) {
+        ////    printf("%f %f %f %f\n", s_ptr[0], s_ptr[1], s_ptr[2], s_ptr[3]);
+        ////}
+        //p_sum += s_ptr[0] + s_ptr[1] + s_ptr[2] + s_ptr[3] + s_ptr[4] + s_ptr[5] + s_ptr[6] + s_ptr[7];
+        for (int j = 1; j < n+1; j++) {
             sum += *IDX(grid, i, j, n);
         }
+
     }
     return (sum / (n*n));
 }

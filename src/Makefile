@@ -7,7 +7,7 @@ BINS:=$(BIN) $(BIN_OMP) $(BIN_CUDA) $(BIN_SIMD)
 CFLAGS+=-std=c99 -Wall -Wpedantic -O3 -D_XOPEN_SOURCE=600
 NVCCFLAGS+=-Wno-deprecated-gpu-targets -O3
 LDLIBS+=-fopenmp -lgomp
-SIMDFLAGS:=-march=native -ftree-vectorize -fopt-info-vec-optimized -fopt-info-vec-missed -mavx #-ffast-math -funsafe-math-optimizations
+SIMDFLAGS:=-march=native -ftree-vectorize -fopt-info-vec-optimized -fopt-info-vec-missed -mavx2 #-ffast-math -funsafe-math-optimizations
 
 .PHONY: clean plot
 
