@@ -4,6 +4,5 @@ omp-earthquake
 simd-earthquake
 *.o
 *~
-*.png
 out
 
