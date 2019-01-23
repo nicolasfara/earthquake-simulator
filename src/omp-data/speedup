@@ -1,0 +1,144 @@
+OMP_NUM_THREADS=1 perf stat -e cache-references,cache-misses -r 5 ../omp-earthquake 100000 256 > out
+../omp-earthquake : 6553.6000 Mupdates in 23.3398 seconds (280.791254 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 23.7381 seconds (276.079229 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 23.5434 seconds (278.362584 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 23.7126 seconds (276.376624 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 23.2918 seconds (281.368840 Mupd/sec)
+
+ Performance counter stats for '../omp-earthquake 100000 256' (5 runs):
+
+     3,193,832,401      cache-references:u                                            ( +-  1.38% )
+            61,471      cache-misses:u            #    0.002 % of all cache refs      ( +-  4.44% )
+
+           23.5264 +- 0.0921 seconds time elapsed  ( +-  0.39% )
+
+
+OMP_NUM_THREADS=2 perf stat -e cache-references,cache-misses -r 5 ../omp-earthquake 100000 256 > out
+../omp-earthquake : 6553.6000 Mupdates in 12.4036 seconds (528.364704 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 12.3797 seconds (529.380880 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 12.4810 seconds (525.087517 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 12.4216 seconds (527.596175 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 11.9519 seconds (548.331913 Mupd/sec)
+
+ Performance counter stats for '../omp-earthquake 100000 256' (5 runs):
+
+     1,589,563,933      cache-references:u                                            ( +-  3.33% )
+            64,065      cache-misses:u            #    0.004 % of all cache refs      ( +- 24.12% )
+
+           12.3295 +- 0.0954 seconds time elapsed  ( +-  0.77% )
+
+
+OMP_NUM_THREADS=4 perf stat -e cache-references,cache-misses -r 5 ../omp-earthquake 100000 256 > out
+../omp-earthquake : 6553.6000 Mupdates in 6.6942 seconds (979.003057 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 6.5839 seconds (995.404369 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 6.7487 seconds (971.085652 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 6.6056 seconds (992.125963 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 6.6239 seconds (989.387483 Mupd/sec)
+
+ Performance counter stats for '../omp-earthquake 100000 256' (5 runs):
+
+       614,927,799      cache-references:u                                            ( +-  3.78% )
+            73,929      cache-misses:u            #    0.012 % of all cache refs      ( +- 20.28% )
+
+            6.6532 +- 0.0306 seconds time elapsed  ( +-  0.46% )
+
+
+OMP_NUM_THREADS=6 perf stat -e cache-references,cache-misses -r 5 ../omp-earthquake 100000 256 > out
+../omp-earthquake : 6553.6000 Mupdates in 5.9298 seconds (1105.205995 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 5.8520 seconds (1119.888686 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 5.7569 seconds (1138.398317 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 5.9640 seconds (1098.857755 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 5.8812 seconds (1114.336936 Mupd/sec)
+
+ Performance counter stats for '../omp-earthquake 100000 256' (5 runs):
+
+       886,613,129      cache-references:u                                            ( +-  2.66% )
+            63,838      cache-misses:u            #    0.007 % of all cache refs      ( +- 10.38% )
+
+            5.8795 +- 0.0356 seconds time elapsed  ( +-  0.61% )
+
+
+OMP_NUM_THREADS=8 perf stat -e cache-references,cache-misses -r 5 ../omp-earthquake 100000 256 > out
+../omp-earthquake : 6553.6000 Mupdates in 4.6926 seconds (1396.567429 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 4.7096 seconds (1391.534028 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 4.7357 seconds (1383.878240 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 4.7259 seconds (1386.748360 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 4.7954 seconds (1366.652374 Mupd/sec)
+
+ Performance counter stats for '../omp-earthquake 100000 256' (5 runs):
+
+       779,698,032      cache-references:u                                            ( +-  2.73% )
+            61,051      cache-misses:u            #    0.008 % of all cache refs      ( +- 18.56% )
+
+            4.7358 +- 0.0187 seconds time elapsed  ( +-  0.39% )
+
+
+OMP_NUM_THREADS=10 perf stat -e cache-references,cache-misses -r 5 ../omp-earthquake 100000 256 > out
+../omp-earthquake : 6553.6000 Mupdates in 16.6288 seconds (394.111428 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 16.6642 seconds (393.273164 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 16.6636 seconds (393.287647 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 16.6808 seconds (392.883454 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 16.6475 seconds (393.668104 Mupd/sec)
+
+ Performance counter stats for '../omp-earthquake 100000 256' (5 runs):
+
+     3,328,285,364      cache-references:u                                            ( +-  0.44% )
+            80,479      cache-misses:u            #    0.002 % of all cache refs      ( +- 20.32% )
+
+          16.65903 +- 0.00878 seconds time elapsed  ( +-  0.05% )
+
+
+OMP_NUM_THREADS=12 perf stat -e cache-references,cache-misses -r 5 ../omp-earthquake 100000 256 > out
+../omp-earthquake : 6553.6000 Mupdates in 17.8177 seconds (367.814072 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 17.7903 seconds (368.379830 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 17.8634 seconds (366.872986 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 17.8058 seconds (368.059959 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 17.8264 seconds (367.633537 Mupd/sec)
+
+ Performance counter stats for '../omp-earthquake 100000 256' (5 runs):
+
+     3,466,010,196      cache-references:u                                            ( +-  0.66% )
+            79,839      cache-misses:u            #    0.002 % of all cache refs      ( +-  6.47% )
+
+           17.8228 +- 0.0123 seconds time elapsed  ( +-  0.07% )
+
+
+OMP_NUM_THREADS=14 perf stat -e cache-references,cache-misses -r 5 ../omp-earthquake 100000 256 > out
+../omp-earthquake : 6553.6000 Mupdates in 21.4273 seconds (305.852689 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 21.2534 seconds (308.355008 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 21.2617 seconds (308.234710 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 21.2033 seconds (309.084480 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 21.4330 seconds (305.770909 Mupd/sec)
+
+ Performance counter stats for '../omp-earthquake 100000 256' (5 runs):
+
+     3,177,804,007      cache-references:u                                            ( +-  0.71% )
+           172,512      cache-misses:u            #    0.005 % of all cache refs      ( +- 36.60% )
+
+           21.3179 +- 0.0478 seconds time elapsed  ( +-  0.22% )
+
+
+OMP_NUM_THREADS=16 perf stat -e cache-references,cache-misses -r 5 ../omp-earthquake 100000 256 > out
+../omp-earthquake : 6553.6000 Mupdates in 23.0780 seconds (283.976183 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 25.6256 seconds (255.743954 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 23.5735 seconds (278.007593 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 23.0118 seconds (284.792431 Mupd/sec)
+../omp-earthquake : 6553.6000 Mupdates in 23.1543 seconds (283.040701 Mupd/sec)
+
+ Performance counter stats for '../omp-earthquake 100000 256' (5 runs):
+
+     3,213,802,212      cache-references:u                                            ( +-  0.62% )
+         2,630,993      cache-misses:u            #    0.082 % of all cache refs      ( +- 75.38% )
+
+            23.691 +- 0.494 seconds time elapsed  ( +-  2.09% )
+
+
+#1  23.5264 / 23.5264 = 1
+#2  23.5264 / 12.3295 = 1.90813901618070481366
+#4  23.5264 / 6.6532  = 3.53610292791438706186
+#6  23.5264 / 5.8795	= 4.00142869291606429118
+#8  23.5264 / 4.7358	= 4.96777735546264622661
+#10 23.5264 / 16.6590	= 1.41223362746863557236
+#12 23.5264 / 17.8228 = 1.32001705680364476962
+#14 23.5264 / 21.3179	= 1.10359838445625507203
+#16 23.5264 / 23.691	= 0.9930522139208982314

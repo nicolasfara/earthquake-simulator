@@ -4,7 +4,8 @@ BIN_SIMD:=$(basename $(wildcard simd-*.c))
 BIN_CUDA:=$(basename $(wildcard cuda-*.cu))
 BINS:=$(BIN) $(BIN_OMP) $(BIN_CUDA) $(BIN_SIMD)
 
-CFLAGS+=-std=c99 -Wall -Wpedantic -O3 -D_XOPEN_SOURCE=600
+CFLAGS+=-std=c99 -Wall -Wpedantic -O2 -D_XOPEN_SOURCE=600
+SIMDCFLAGS+=-std=c99 -Wall -Wpedantic -O3 -D_XOPEN_SOURCE=600
 NVCCFLAGS+=-Wno-deprecated-gpu-targets -O3
 LDLIBS+=-fopenmp -lgomp
 SIMDFLAGS:=-march=native -ftree-vectorize -fopt-info-vec-optimized -fopt-info-vec-missed -mavx2 #-ffast-math -funsafe-math-optimizations
@@ -23,7 +24,7 @@ cuda:
 	nvcc $(NVCCFLAGS) cuda-earthquake.cu -o $(BIN_CUDA)
 
 simd:
-	cc $(CFLAGS) $(LDLIBS) $(SIMDFLAGS) simd-earthquake.c -o $(BIN_SIMD)
+	cc $(SIMDCFLAGS) $(LDLIBS) $(SIMDFLAGS) simd-earthquake.c -o $(BIN_SIMD)
 
 plot: serial
 	./$(EXE_SERIAL) 100000 256 > out
