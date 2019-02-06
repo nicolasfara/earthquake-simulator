@@ -2,14 +2,14 @@ reset
 set term png size 1300,600 truecolor
 set output 'omp-time.png'
 
-set title "Tempi esecuzione algoritmo Burridge-Knopoff - OpenMP"
+set title "Tempi esecuzione algoritmo Burridge-Knopoff - OpenMP" font ", 18"
 set grid
 
 set xtics
 set ytics
 
-set ylabel "Secondi"
-set xlabel "Thread(s)"
+set ylabel "Secondi" font ", 14"
+set xlabel "Thread(s)" font ", 14"
 
 set style fill pattern border -1
 set style data histograms
