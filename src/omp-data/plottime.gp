@@ -1,32 +1,28 @@
-# http://gnuplot.sourceforge.net/demo_5.0/histograms.html
-
-set title 'Tempi di esecuzione'
-set xlabel 'Thread(s)'
-set ylabel 'Secondi'
-
-set grid
-set key top right vertical inside noreverse enhanced autotitle box dashtype solid title "Lato dominio"
-set tics out nomirror
-set border 3 front linetype black linewidth 1.0 dashtype solid
-
-#set xrange [1:16]
-set xtics 1
-#set mxtics 1
-
-#set yrange [0:250]
-# set ytics 5
-
-set style line 1 linecolor rgb '#0060ad' linetype 1 linewidth 2
-
-set style histogram clustered gap 1 title offset character 0, 0, 0
-set style data histograms
-
-set boxwidth 1.0 absolute
-set style fill solid 5.0 border -1
-
-set terminal png enhanced
+reset
+set term png size 1300,600 truecolor
 set output 'omp-time.png'
 
-plot 'time.dat' using 2:xtic(1) with histogram title '256', \
-	'' using 3 title '512', \
-  '' using 4 title '1024'
+set title "Tempi esecuzione algoritmo Burridge-Knopoff - OpenMP"
+set grid
+
+set xtics
+set ytics
+
+set ylabel "Secondi"
+set xlabel "Thread(s)"
+
+set style fill pattern border -1
+set style data histograms
+set boxwidth 1.0
+set style histogram clustered gap 1
+
+set key spacing 1 title "Lato dominio"
+#using directly 'set key spacing 2 font fontSpec(18)' doesn't seem to work...
+
+fn(v) = sprintf("%.1f", v)
+
+plot \
+    for [COL=2:4] 'time.dat' using COL:xticlabels(1) title columnheader fs pattern 1, \
+    'time.dat' u ($0-1-1./4):2:(fn($2)) w labels offset char 0,0.5 t '', \
+    'time.dat' u ($0-1):3:(fn($3)) w labels offset char 0,0.5 t '', \
+    'time.dat' u ($0-1+1./4):4:(fn($4)) w labels offset char 0,0.5 t ''
