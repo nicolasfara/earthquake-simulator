@@ -62,36 +62,36 @@ __global__ void increment_energy(float *grid, int ext_n, float delta)
  */
 __global__ void count_cells(float *grid, size_t ext_n, int *res, unsigned int s)
 {
-    //extern __shared__ int sdata[];
-
-    //unsigned int tid = threadIdx.x;
-    ////unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    //sdata[tid] = 0;
-
-    //__syncthreads();
-
-    //for (unsigned int s = 1; s < blockDim.x; s *= 2) {
-    //    if (tid % (2 * s) == 0 && *(grid+s) > EMAX) {
-    //        sdata[tid]++;
-    //    }
-
-    //    __syncthreads();
-    //}
-
-    //if (tid == 0) {
-    //    atomicAdd(res, sdata[0]);
-    //}
-
-    //int count = thrust::count_if(thrust::device, grid, grid+(n*n), is_emax<float>());
-    ////std::cout << "Count: " << count << std::endl;
-    //return count;
     const int i = threadIdx.x + blockDim.x * blockIdx.x;
     if (i == 0) res[s] = 0;
 
     if (i < ext_n*ext_n) {
         if (grid[i] > EMAX) {
             atomicAdd(&res[s], 1);
+        }
+    }
+}
+
+__global__ void count_cells_shared(float *grid, size_t ext_n, int *res, unsigned int s)
+{
+    extern __shared__ int ldata[];
+    const int gindex = threadIdx.x + blockIdx.x * blockDim.x;
+    const int lindex = threadIdx.x;
+
+    if (gindex == 0) res[s] = 0;
+    ldata[lindex] = 0;
+
+    if (gindex < ext_n * ext_n) {
+        ldata[lindex] = (int)(grid[gindex] > EMAX);
+
+        __syncthreads();
+
+        if (lindex == 0) {
+            for (int i = 1; i < blockDim.x; i++) {
+                ldata[0] += ldata[i];
+            }
+
+            atomicAdd(&res[s], ldata[0]);
         }
     }
 }
@@ -406,12 +406,18 @@ int main(int argc, char* argv[])
 
     const double tstart = hpc_gettime();
     for (unsigned int s = 0; s < nsteps; s++) {
-        /* stuff */
         increment_energy<<<grid2, block2>>>(d_cur, ext_n, EDELTA);
+#ifdef _SHARED
+        count_cells_shared<<<grid1, block1, sizeof(int)*BLKSIZE>>>(d_cur, ext_n, d_c, s);
+#else
         count_cells<<<grid1, block1>>>(d_cur, ext_n, d_c, s);
+#endif
+
+#ifdef _SHARED
+        propagate_energy_shared<<<p_grid, p_block>>>(d_cur, d_next, ext_n);
+#else
         propagate_energy<<<grid2, block2>>>(d_cur, d_next, ext_n);
-        //propagate_energy_shared<<<p_grid, p_block>>>(d_cur, d_next, ext_n);
-        //average_energy<<<c_grid, c_block, sum_buff_size>>>(d_next, ext_elem, d_emean, s);
+#endif
         average_energy<BLKSIZE/2><<<c_grid, c_block, sum_buff_size>>>(d_next, d_emean, ext_elem, s);
 
         float *tmp = d_cur;

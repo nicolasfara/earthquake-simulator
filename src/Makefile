@@ -23,6 +23,9 @@ omp:
 cuda:
 	nvcc $(NVCCFLAGS) cuda-earthquake.cu -o $(BIN_CUDA)
 
+cuda-shared:
+	nvcc $(NVCCFLAGS) -D_SHARED cuda-earthquake.cu -o $(BIN_CUDA)
+
 simd:
 	cc $(SIMDCFLAGS) $(LDLIBS) $(SIMDFLAGS) simd-earthquake.c -o $(BIN_SIMD)
 
