@@ -221,68 +221,6 @@ __global__ void propagate_energy_shared(float* cur, float* next, size_t ext_n)
     }
 }
 
-/**
- * Restituisce l'energia media delle celle del dominio grid di
- * dimensioni n*n. Il dominio non viene modificato.
- */
-/*__global__ void average_energy(float* grid, size_t ext_elem, float *res, unsigned int s)
-{
-    extern __shared__ float data[];
-
-    unsigned int tid = threadIdx.x;
-    unsigned int i = blockIdx.x * (blockDim.x*2) + threadIdx.x;
-
-    if (i < ext_elem) {
-        data[tid] = grid[i] + grid[i+blockDim.x];
-    } else { //padding memory
-        data[tid] = 0.0f;
-    }
-
-    if (i == 0) res[s] = 0.0f;
-
-    __syncthreads();
-
-    for (unsigned int r = blockDim.x/2; r > 0; r >>= 1) {
-        if (tid < r) {
-            data[tid] += data[tid + r];
-        }
-
-        __syncthreads();
-    }
-
-    if (tid == 0) {
-        atomicAdd(&res[s], data[0]);
-    }
-}*/
-
-/*__global__ void average_energy(float* grid, size_t ext_elem, float *res, unsigned int s) {
-    extern __shared__ float local_sum[];
-    const unsigned int lindex = threadIdx.x;
-    const unsigned int gindex = threadIdx.x + blockIdx.x * blockDim.x;
-    unsigned int bsize = blockDim.x / 2;
-
-    if (gindex == 0)
-        res[s] = 0.0f;
-
-    if (gindex < ext_elem) {
-        local_sum[lindex] = grid[gindex];
-    } else {
-        local_sum[lindex] = 0.0f;
-    }
-    __syncthreads();
-
-    while (bsize > 0) {
-        if (lindex < bsize) {
-            local_sum[lindex] += local_sum[lindex + bsize];
-        }
-        bsize /= 2;
-        __syncthreads();
-    }
-    if (lindex == 0) {
-        atomicAdd(&res[s], local_sum[0]);
-    }
-}*/
-
 template <unsigned int blockSize>
 __device__ void warpReduce(volatile float* sdata, unsigned int tid) {
     if (blockSize >= 64) sdata[tid] += sdata[tid+32];
