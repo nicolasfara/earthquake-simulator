@@ -75,25 +75,26 @@ __global__ void count_cells(float *grid, size_t ext_n, int *res, unsigned int s)
 __global__ void count_cells_shared(float *grid, size_t ext_n, int *res, unsigned int s)
 {
     extern __shared__ int ldata[];
-    const int gindex = threadIdx.x + blockIdx.x * blockDim.x;
-    const int lindex = threadIdx.x;
+    // each thread loads one element from global to shared mem
 
-    if (gindex == 0) res[s] = 0;
-    ldata[lindex] = 0;
+    unsigned int tid = threadIdx.x;
+    unsigned int i = blockIdx.x*blockDim.x + threadIdx.x;
+    ldata[tid] = (int)(grid[i] > EMAX);
 
-    if (gindex < ext_n * ext_n) {
-        ldata[lindex] = (int)(grid[gindex] > EMAX);
+    __syncthreads();
 
-        __syncthreads();
-
-        if (lindex == 0) {
-            for (int i = 1; i < blockDim.x; i++) {
-                ldata[0] += ldata[i];
-            }
-
-            atomicAdd(&res[s], ldata[0]);
+    // do reduction in shared mem
+    for(unsigned int s=1; s < blockDim.x; s *= 2)
+    {
+        if (tid % (2*s) == 0) {
+            ldata[tid] += ldata[tid + s];
         }
+        __syncthreads();
     }
+
+    // write result for this block to global mem
+
+    if (tid == 0) atomicAdd(&res[s], ldata[0]);
 }
 
 /**
@@ -120,36 +121,7 @@ __global__ void propagate_energy(float* cur, float* next, size_t ext_n)
         F += (float)(*IDX(cur, i-1, j, ext_n)>EMAX) * FDELTA;
         F += (float)(*IDX(cur, i+1, j, ext_n)>EMAX) * FDELTA;
 
-        //F += *IDX(cur, i, j-1, ext_n) > EMAX ? FDELTA : 0.0f;
-        //F += *IDX(cur, i, j+1, ext_n) > EMAX ? FDELTA : 0.0f;
-        //F += *IDX(cur, i-1, j, ext_n) > EMAX ? FDELTA : 0.0f;
-        //F += *IDX(cur, i+1, j, ext_n) > EMAX ? FDELTA : 0.0f;
-
-        //if (*IDX(cur, i, j-1, ext_n) > EMAX) {
-        ////if (data[ti][tj-1] > EMAX) {
-        //    F += FDELTA;
-        //}
-        ///* Idem per il vicino di destra */
-        //if (*IDX(cur, i, j+1, ext_n) > EMAX) {
-        ////if (data[ti][tj+1] > EMAX) {
-        //    F += FDELTA;
-        //}
-        ///* Idem per il vicino in alto */
-        //if (*IDX(cur, i-1, j, ext_n) > EMAX) {
-        ////if (data[ti-1][tj] > EMAX) {
-        //    F += FDELTA;
-        //}
-        ///* Idem per il vicino in basso */
-        //if (*IDX(cur, i+1, j, ext_n) > EMAX) {
-        ////if (data[ti+1][tj] > EMAX) {
-        //    F += FDELTA;
-        //}
-
         F -= (float)(F>EMAX) * EMAX;
-
-        //if (F > EMAX) {
-        //    F -= EMAX;
-        //}
 
         /* Si noti che il valore di F potrebbe essere ancora
            maggiore di EMAX; questo non e' un problema:
@@ -183,33 +155,12 @@ __global__ void propagate_energy_shared(float* cur, float* next, size_t ext_n)
             /* Se l'energia del vicino di sinistra (se esiste) e'
                maggiore di EMAX, allora la cella (i,j) ricevera'
                energia addizionale FDELTA = EMAX/4 */
-            //if (*IDX(cur, i, j-1, ext_n) > EMAX) {
-            F += (data[ti][tj-1] > EMAX) ? FDELTA : 0.0f;
-            F += (data[ti][tj+1] > EMAX) ? FDELTA : 0.0f;
-            F += (data[ti-1][tj] > EMAX) ? FDELTA : 0.0f;
-            F += (data[ti+1][tj] > EMAX) ? FDELTA : 0.0f;
-            //if (data[ti][tj-1] > EMAX) {
-            //    F += FDELTA;
-            //}
-            ///* Idem per il vicino di destra */
-            ////if (*IDX(cur, i, j+1, ext_n) > EMAX) {
-            //if (data[ti][tj+1] > EMAX) {
-            //    F += FDELTA;
-            //}
-            ///* Idem per il vicino in alto */
-            ////if (*IDX(cur, i-1, j, ext_n) > EMAX) {
-            //if (data[ti-1][tj] > EMAX) {
-            //    F += FDELTA;
-            //}
-            ///* Idem per il vicino in basso */
-            ////if (*IDX(cur, i+1, j, ext_n) > EMAX) {
-            //if (data[ti+1][tj] > EMAX) {
-            //    F += FDELTA;
-            //}
+            F += (float)(data[ti][tj-1] > EMAX) * FDELTA;
+            F += (float)(data[ti][tj+1] > EMAX) * FDELTA;
+            F += (float)(data[ti-1][tj] > EMAX) * FDELTA;
+            F += (float)(data[ti+1][tj] > EMAX) * FDELTA;
 
-            if (F > EMAX) {
-                F -= EMAX;
-            }
+            F -= (float)(F > EMAX) * EMAX;
 
             /* Si noti che il valore di F potrebbe essere ancora
                maggiore di EMAX; questo non e' un problema:
@@ -346,7 +297,7 @@ int main(int argc, char* argv[])
     for (unsigned int s = 0; s < nsteps; s++) {
         increment_energy<<<grid2, block2>>>(d_cur, ext_n, EDELTA);
 #ifdef _SHARED
-        count_cells_shared<<<grid1, block1, sizeof(int)*BLKSIZE>>>(d_cur, ext_n, d_c, s);
+        count_cells_shared<<<grid1, block1, sum_buff_size>>>(d_cur, ext_n, d_c, s);
 #else
         count_cells<<<grid1, block1>>>(d_cur, ext_n, d_c, s);
 #endif
