@@ -46,6 +46,17 @@
  * spiegato nella specifica del progetto.
  *
  ****************************************************************************/
+/*
+ * simd-earthquake.c
+ * Copyright (C) 2019 nicolasfara <nicolas.farabegoli@gmail.com>
+ *
+ * Distributed under terms of the MIT license.
+ *
+ * Name: Nicolas
+ * Lastname: Farabegoli
+ * Student ID: 788928
+ */
+
 #include "hpc.h"
 #include <assert.h>
 #include <immintrin.h>

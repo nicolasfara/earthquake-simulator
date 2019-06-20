@@ -1,3 +1,14 @@
+/*
+ * cuda-earthquake.cu
+ * Copyright (C) 2019 nicolasfara <nicolas.farabegoli@gmail.com>
+ *
+ * Distributed under terms of the MIT license.
+ *
+ * Name: Nicolas
+ * Lastname: Farabegoli
+ * Student ID: 788928
+ */
+
 #include "hpc.h"
 #include <stdio.h>
 #include <assert.h>
